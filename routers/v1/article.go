@@ -59,7 +59,7 @@ func GetArticles(c *gin.Context) {
 		tagId = com.StrTo(arg).MustInt()
 		maps["tag_id"] = tagId
 
-		valid.Min(tagId, 1, "tag_id").Message("")
+		valid.Min(tagId, 1, "tag_id").Message("不能小于0")
 	}
 
 	code := exception.INVALID_PARAMS

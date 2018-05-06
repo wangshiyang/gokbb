@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"shawn/gokbb/common/setting"
 	"shawn/gokbb/routers/v1"
+	"shawn/gokbb/middleware/jwt"
 )
 
 func InitRouter() *gin.Engine {
@@ -15,7 +16,11 @@ func InitRouter() *gin.Engine {
 
 	gin.SetMode(setting.RunMode)
 
+	r.GET("/auth", v1.GetAuth)
+
 	apiv1 := r.Group("/api/v1")
+
+	apiv1.Use(jwt.JWT())
 	{
 		apiv1.GET("/tags", v1.GetTags)
 

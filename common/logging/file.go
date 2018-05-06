@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	LogSavePath = "runtime/logs"
+	LogSavePath = "runtime/logs/"
 	LogSaveName = "log"
 	LogFileExt  = "log"
 	TimeFormat  = "20060102"
@@ -22,7 +22,7 @@ func getLogFileFullPath() string {
 	prefixPath := getLogFilePath()
 	suffixPath := fmt.Sprintf("%s%s.%s", LogSaveName, time.Now().Format(TimeFormat), LogFileExt)
 
-	return fmt.Sprintf("%s/%s", prefixPath, suffixPath)
+	return fmt.Sprintf("%s%s", prefixPath, suffixPath)
 }
 
 func openLogFile(filePath string) *os.File {
