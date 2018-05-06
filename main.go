@@ -5,6 +5,11 @@ import (
 	"fmt"
 	"shawn/gokbb/common/setting"
 	"shawn/gokbb/routers"
+	"shawn/gokbb/common/logging"
+	"os"
+	"os/signal"
+	"context"
+	"time"
 )
 
 func main() {
@@ -18,5 +23,25 @@ func main() {
 		MaxHeaderBytes: 1 << 20,
 	}
 
-	s.ListenAndServe()
+	go func() {
+		if err := s.ListenAndServe(); err != nil {
+			logging.Info("Listen: %s\n", err)
+		}
+	}()
+
+	quit := make(chan os.Signal)
+
+	signal.Notify(quit, os.Interrupt)
+	<-quit
+
+	logging.Info("Shutdown Server......")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := s.Shutdown(ctx); err != nil {
+		logging.Error("Server Shutdown error:", err)
+	}
+
+	logging.Info("Server exiting")
 }
