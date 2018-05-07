@@ -48,7 +48,7 @@ func updateCallback(scope *gorm.Scope) {
 	}
 }
 
-func deletedCallback(scope *gorm.Scope) {
+func deleteCallback(scope *gorm.Scope) {
 	if !scope.HasError() {
 		var extraOption string
 		if str, ok := scope.Get("gorm:delete_option"); ok {
@@ -126,6 +126,7 @@ func init() {
 
 	db.Callback().Create().Register("gorm:update_time_stamp", createCallback)
 	db.Callback().Update().Register("gorm:update_time_stamp", updateCallback)
+	db.Callback().Delete().Register("gorm:delete", deleteCallback)
 }
 
 func CloseDB() {
