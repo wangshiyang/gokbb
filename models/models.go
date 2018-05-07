@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"shawn/gokbb/common/setting"
 	_ "github.com/go-sql-driver/mysql"
+	"time"
 )
 
 var db *gorm.DB
@@ -14,6 +15,77 @@ type Model struct {
 	ID         int `gorm:"primary_key" json:"id"`
 	CreatedOn  int `json:"created_on"`
 	ModifiedOn int `json:"modified_on"`
+	DeletedOn  int `json:"deleted_on"`
+	IsDeleted  int `json:"is_deleted"`
+}
+
+func createCallback(scope *gorm.Scope) {
+	if !scope.HasError() {
+		nowTime := time.Now().Unix()
+		if createTime, ok := scope.FieldByName("CreatedOn"); ok {
+			if createTime.IsBlank {
+				createTime.Set(nowTime)
+			}
+		}
+
+		if updateTime, ok := scope.FieldByName("ModifiedOn"); ok {
+			if updateTime.IsBlank {
+				updateTime.Set(nowTime)
+			}
+		}
+
+		if isDeleted, ok := scope.FieldByName("IsDeleted"); ok {
+			if isDeleted.IsBlank {
+				isDeleted.Set(0)
+			}
+		}
+	}
+}
+
+func updateCallback(scope *gorm.Scope) {
+	if _, ok := scope.Get("gorm:update_column"); !ok {
+		scope.SetColumn("ModifiedOn", time.Now().Unix())
+	}
+}
+
+func deletedCallback(scope *gorm.Scope) {
+	if !scope.HasError() {
+		var extraOption string
+		if str, ok := scope.Get("gorm:delete_option"); ok {
+			extraOption = fmt.Sprint(str)
+		}
+
+		deletedAtField, hasDeletedAtField := scope.FieldByName("isDeleted")
+		deletedTime, _ := scope.FieldByName("DeletedOn")
+
+		if !scope.Search.Unscoped && hasDeletedAtField {
+			scope.Raw(fmt.Sprintf(
+				"UPDATE %v SET %v=%v,%v=%v%v%v",
+				scope.QuotedTableName(),
+				scope.Quote(deletedAtField.DBName),
+				scope.AddToVars(1),
+				scope.Quote(deletedTime.DBName),
+				scope.AddToVars(time.Now().Unix()),
+				addExtraSpaceIfExist(scope.CombinedConditionSql()),
+				addExtraSpaceIfExist(extraOption),
+
+			)).Exec()
+		} else {
+			scope.Raw(fmt.Sprintf(
+				"DELETE FROM %v%v%v",
+				scope.QuotedTableName(),
+				addExtraSpaceIfExist(scope.CombinedConditionSql()),
+				addExtraSpaceIfExist(extraOption),
+			)).Exec()
+		}
+	}
+}
+
+func addExtraSpaceIfExist(str string) string {
+	if str != "" {
+		return " " + str
+	}
+	return ""
 }
 
 func init() {
@@ -51,6 +123,9 @@ func init() {
 	db.SingularTable(true)
 	db.DB().SetMaxIdleConns(10)
 	db.DB().SetMaxOpenConns(100)
+
+	db.Callback().Create().Register("gorm:update_time_stamp", createCallback)
+	db.Callback().Update().Register("gorm:update_time_stamp", updateCallback)
 }
 
 func CloseDB() {
